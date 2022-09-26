@@ -120,6 +120,13 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  acquire(&tickslock);
+  p->ctime = ticks;
+  p->stime = 0;
+  p->etime = 0;
+  release(&tickslock);
+
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -342,7 +349,7 @@ forkf(uint64 f){
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
   // np->trapframe->ra = np->trapframe->epc;
-  // np->trapframe->epc = f;
+  np->trapframe->epc = f;
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
@@ -417,6 +424,11 @@ exit(int status)
   acquire(&p->lock);
 
   p->xstate = status;
+
+  acquire(&tickslock);
+  p->etime = ticks;
+  release(&tickslock);
+
   p->state = ZOMBIE;
 
   release(&wait_lock);
@@ -620,6 +632,10 @@ forkret(void)
     // File system initialization must be run in the context of a
     // regular process (e.g., because it calls sleep), and thus cannot
     // be run from main().
+    acquire(&tickslock);
+    (myproc())->stime = ticks;
+    release(&tickslock);
+
     first = 0;
     fsinit(ROOTDEV);
   }
@@ -757,4 +773,92 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+void
+ps(void)
+{
+  static char *states[] = {
+  [UNUSED]    "unused",
+  [SLEEPING]  "sleep ",
+  [RUNNABLE]  "runble",
+  [RUNNING]   "run   ",
+  [ZOMBIE]    "zombie"
+  };
+  struct proc *p;
+  char *state;
+  int pid;
+  int ppid;
+  char cmd[16];
+  uint ctime,stime,etime;
+  uint64 sz;
+ // pid, ppid, state, cmd, ctime, stime, etime, size
+  printf("\n");
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state == UNUSED){
+      release(&p->lock);
+      continue;
+    }
+    acquire(&wait_lock);
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+      state = states[p->state];
+    else
+      state = "???";
+
+    pid = p->pid;
+
+    if(pid == 1) ppid = -1;
+    else ppid = p->parent->pid;
+
+    safestrcpy(cmd, p->name, sizeof(p->name));
+
+    ctime = p->ctime;
+    stime = p->stime;
+    etime = p->etime;
+    sz = p->sz;
+
+    printf("pid=%d, ppid=%d, state=%s, cmd=%s, ctime=%d, stime=%d, etime=%d, size=%d", pid, ppid, state, cmd, ctime, stime, etime, sz);
+    printf("\n");
+    release(&wait_lock);
+    release(&p->lock);
+  }
+}
+
+int 
+pinfor(int x, uint64 addr){
+  // int pid=x;
+  // struct procstat *info = addr;
+  // if(x==-1){
+  //   pid = myproc->pid;
+  // }
+  // struct proc* p;
+  // for(p = proc; p< &proc[NPROC];p++){
+  //   if(p->pid == x){
+  //     acquire(&p->lock);
+  //     acquire(&wait_lock);
+  //     info->pid = pid;
+
+  //     if(pid == 1) info->ppid = -1;
+  //     else info->ppid = p->parent->pid;
+
+  //     if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+  //     info->state = states[p->state];
+  //     else
+  //     info->state = "???";
+
+  //     safestrcpy(info->cmd, p->name, sizeof(p->name));
+
+
+  //     info->ctime = p->ctime;
+  //     info->stime = p->stime;
+  //     info->etime = p->etime;
+  //     info->size = p->sz;
+
+
+  //     release(&p->lock);
+  //     release(&wait_lock);
+  //   }
+  // }
+  return 0;
 }

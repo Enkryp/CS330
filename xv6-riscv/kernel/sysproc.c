@@ -7,6 +7,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "getpa.h"
+#include "procstat.h"
 // #include "user/user.h"
 
 uint64
@@ -152,4 +153,22 @@ sys_waitpid(void)
     waitpid(x,p);
   }
   return -1;
+}
+
+uint64
+sys_ps(void){
+  ps();
+  return 0;
+}
+
+uint64
+sys_pinfo(void){
+  return 0;
+  // int x;
+  // uint pstat;
+  // if(argint(0,&x)<0)
+  //   return -1;
+  // if(argaddr(1, &pstat)<0)
+  //   return -1;
+  // return pinfo(x,pstat);
 }

@@ -25,3 +25,5 @@
 #define SYS_yield  24
 #define SYS_forkf  25
 #define SYS_waitpid 26
+#define SYS_ps     27
+#define SYS_pinfo  28
