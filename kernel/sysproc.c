@@ -95,3 +95,73 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_getppid(void)
+{
+  if (myproc()->parent) return myproc()->parent->pid;
+  else {
+     printf("No parent found.\n");
+     return 0;
+  }
+}
+
+uint64
+sys_yield(void)
+{
+  yield();
+  return 0;
+}
+
+uint64
+sys_getpa(void)
+{
+  uint64 x;
+  if (argaddr(0, &x) < 0) return -1;
+  return walkaddr(myproc()->pagetable, x) + (x & (PGSIZE - 1));
+}
+
+uint64
+sys_forkf(void)
+{
+  uint64 x;
+  if (argaddr(0, &x) < 0) return -1;
+  return forkf(x);
+}
+
+uint64
+sys_waitpid(void)
+{
+  uint64 p;
+  int x;
+
+  if(argint(0, &x) < 0)
+    return -1;
+  if(argaddr(1, &p) < 0)
+    return -1;
+
+  if (x == -1) return wait(p);
+  if ((x == 0) || (x < -1)) return -1;
+  return waitpid(x, p);
+}
+
+uint64
+sys_ps(void)
+{
+   return ps();
+}
+
+uint64
+sys_pinfo(void)
+{
+  uint64 p;
+  int x;
+
+  if(argint(0, &x) < 0)
+    return -1;
+  if(argaddr(1, &p) < 0)
+    return -1;
+
+  if ((x == 0) || (x < -1) || (p == 0)) return -1;
+  return pinfo(x, p);
+}
